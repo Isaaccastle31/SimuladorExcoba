@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Simulador EXCOBA — 180 Reactivos</title>
+  <style>
+    :root{
+      --bg:#f7f8fb;
+      --card:#ffffff;
+      --accent:#0b74de;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:#111}
+    header{
+      position:sticky; top:0; z-index:10;
+      background:linear-gradient(180deg,#fff,rgba(255,255,255,.92));
+      border-bottom:1px solid var(--line);
+      backdrop-filter: saturate(1.2) blur(6px);
+    }
+    .bar{max-width:980px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
+    .title{font-weight:800}
+    .meta{font-size:13px;color:var(--muted)}
+    .wrap{max-width:980px;margin:0 auto;padding:16px}
+    .panel{
+      display:grid;grid-template-columns: 1fr 260px;gap:16px;
+    }
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(12,15,30,.05)}
+    .question{padding:16px}
+    .q-number{color:var(--accent);font-weight:800}
+    .q-text{font-size:18px;line-height:1.35;margin:10px 0 12px}
+    .options{display:flex;flex-direction:column;gap:10px}
+    .op{
+      display:flex;gap:10px;align-items:center;
+      border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;
+      transition:transform .08s, box-shadow .12s, border-color .12s;
+      user-select:none;
+    }
+    .op:active{transform:scale(.997)}
+    .op.selected{border-color:var(--accent);box-shadow:0 8px 22px rgba(11,116,222,.08);background:#eef5ff}
+    .op input{appearance:none;width:20px;height:20px;border-radius:6px;border:2px solid #cbd5e1;flex-shrink:0}
+    .op.selected input{background:var(--accent);border-color:var(--accent)}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;padding:12px;border-top:1px solid var(--line)}
+    button{
+      padding:12px 16px;border:1px solid var(--line);background:#fff;border-radius:10px;cursor:pointer;font-weight:800;min-width:120px;
+      box-shadow:0 6px 18px rgba(12,15,30,.05);
+    }
+    .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .aside{padding:12px;display:flex;flex-direction:column;gap:12px}
+    .progress{padding:12px;border-radius:12px;background:linear-gradient(90deg,#e6f0ff,#fff);border:1px solid #e6eef8}
+    .progress-bar{height:12px;background:#eaf2ff;border-radius:999px;overflow:hidden;margin-top:8px}
+    .progress-bar div{height:100%;width:0%;background:var(--accent);transition:width .3s}
+    .grid{display:grid;grid-template-columns: repeat(6,1fr); gap:6px}
+    .grid button{padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+    .grid button.answered{background:#eaf2ff;border-color:#bcd7ff}
+    .grid button.current{border-color:var(--accent)}
+    .note{font-size:12px;color:var(--muted)}
+    .footer-mobile{
+      display:none;position:sticky;bottom:0;background:rgba(255,255,255,.95);
+      border-top:1px solid var(--line);padding:10px;backdrop-filter: blur(6px);
+    }
+    .footer-mobile .controls{padding:0;border-top:none}
+    /* Mobile */
+    @media (max-width: 900px){
+      .panel{grid-template-columns: 1fr}
+      .footer-mobile{display:block}
+      .controls{justify-content:center}
+      .q-text{font-size:17px}
+      .grid{grid-template-columns: repeat(5,1fr)}
+      .bar{padding:10px 12px}
+    }
+    /* Touch targets + iOS zoom prevention */
+    button, .op, input, select { min-height:44px }
+    input, select, textarea { font-size:16px }
+    body { -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="brand">
+        <div class="logo">SR</div>
+        <div>
+          <div class="title">Simulador EXCOBA — 180 Reactivos</div>
+          <div class="meta"><span id="metaNum">1</span>/<span id="metaTotal">180</span> · Guarda progreso localmente</div>
+        </div>
+      </div>
+      <div class="meta">Tiempo: <span id="timer">--:--</span></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="panel">
+      <section class="card">
+        <div class="question">
+          <div class="q-number" id="qNumber">Pregunta 1</div>
+          <div class="q-text" id="qText">Cargando…</div>
+          <div class="options" id="options"></div>
+        </div>
+        <div class="controls">
+          <button id="prev">Anterior</button>
+          <button class="btn-primary" id="next">Siguiente</button>
+          <button id="finish">Terminar</button>
+        </div>
+      </section>
+
+      <aside class="card aside">
+        <div class="progress">
+          <div style="font-weight:800">Progreso</div>
+          <div class="progress-bar"><div id="progressFill"></div></div>
+          <div class="note">Se guarda en tu dispositivo (localStorage).</div>
+        </div>
+        <div>
+          <div style="font-weight:800;margin-bottom:8px">Navegación rápida</div>
+          <div class="grid" id="grid"></div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Footer móvil -->
+    <div class="footer-mobile card">
+      <div class="controls">
+        <button id="prev_m">Anterior</button>
+        <button class="btn-primary" id="next_m">Siguiente</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    /* ========= Utilidades ========= */
+    const STATE_KEY = "excoba_sim_180_v1";
+    const metaNum = document.getElementById('metaNum');
+    const metaTotal = document.getElementById('metaTotal');
+    const qNumber = document.getElementById('qNumber');
+    const qText = document.getElementById('qText');
+    const optionsWrap = document.getElementById('options');
+    const progressFill = document.getElementById('progressFill');
+    const grid = document.getElementById('grid');
+    const timerEl = document.getElementById('timer');
+    let T0 = Date.now();
+
+    function shuffle(a){
+      for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+      return a;
+    }
+    function between(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+    /* ========= Generador de 180 reactivos ========= */
+    function generateArithmetic(){
+      const a = between(8,99), b = between(3,49);
+      const ops = ['+','-','×','÷'];
+      const op = ops[between(0,ops.length-1)];
+      let q, correct;
+      if(op === '+'){ q = `${a} + ${b} = ?`; correct = a + b; }
+      else if(op === '-'){ q = `${a} - ${b} = ?`; correct = a - b; }
+      else if(op === '×'){ q = `${a} × ${b} = ?`; correct = a * b; }
+      else {
+        const prod = a * b;
+        q = `${prod} ÷ ${a} = ?`;
+        correct = b;
+      }
+      const opts = new Set([correct]);
+      while(opts.size<4){
+        const delta = between(-10,10) || 1;
+        opts.add(correct + delta*between(1,3));
+      }
+      const options = shuffle([...opts]).map(x=>String(x));
+      const answer = options.indexOf(String(correct));
+      return {q, options, answer};
+    }
+
+    function generatePercent(){
+      const base = between(40,350);
+      const pct = [5,10,12,15,20,25,30,35,40,50][between(0,9)];
+      const correct = Math.round(base * pct)/100;
+      const q = `¿Cuánto es el ${pct}% de ${base}?`;
+      const opts = new Set([correct]);
+      while(opts.size<4){
+        const noise = (between(-15,15))/100;
+        const v = Math.round((base * (pct/100 + noise))*100)/100;
+        opts.add(v);
+      }
+      const options = shuffle([...opts]).map(v => (Number.isInteger(v)? String(v) : String(v.toFixed(2))));
+      const answer = options.indexOf(Number.isInteger(correct)? String(correct) : String(correct.toFixed(2)));
+      return {q, options, answer};
+    }
+
+    function generateSequence(){
+      // arithmetic or geometric simple
+      if(Math.random()<0.6){
+        const start = between(1,20);
+        const step = between(2,9);
+        const seq = [start, start+step, start+2*step, start+3*step];
+        const correct = start+4*step;
+        const q = `Continúa la secuencia: ${seq.join(', ')}, ¿cuál sigue?`;
+        const opts = new Set([correct]);
+        while(opts.size<4){ opts.add(correct + between(-3,3)*step || correct+step); }
+        const options = shuffle([...opts]).map(String);
+        const answer = options.indexOf(String(correct));
+        return {q, options, answer};
+      } else {
+        const start = between(1,9);
+        const ratio = between(2,5);
+        const seq = [start, start*ratio, start*ratio*ratio, start*ratio*ratio*ratio];
+        const correct = seq[3]*ratio;
+        const q = `Completa la secuencia: ${seq.join(', ')}, ¿cuál sigue?`;
+        const opts = new Set([correct]);
+        while(opts.size<4){ opts.add(correct * between(1,3)); }
+        const options = shuffle([...opts]).map(String);
+        const answer = options.indexOf(String(correct));
+        return {q, options, answer};
+      }
+    }
+
+    const SYN_BANK = [
+      {w:"efímero", ok:"pasajero", d:["perenne","perpetuo","memorable"]},
+      {w:"tenaz", ok:"persistente", d:["débil","inconstante","voluble"]},
+      {w:"ambiguo", ok:"incierto", d:["evidente","claro","taxativo"]},
+      {w:"hostil", ok:"adverso", d:["afable","ameno","cordial"]},
+      {w:"próspero", ok:"floreciente", d:["mísero","precario","raquítico"]},
+      {w:"discrepar", ok:"diferir", d:["acordar","convenir","admitir"]},
+      {w:"rudimentario", ok:"básico", d:["avanzado","sofisticado","complejo"]},
+      {w:"escueto", ok:"breve", d:["extenso","florido","recargado"]},
+      {w:"nítido", ok:"claro", d:["borroso","opaco","confuso"]},
+      {w:"veraz", ok:"cierto", d:["falaz","engañoso","apócrifo"]},
+      {w:"oneroso", ok:"costoso", d:["económico","barato","gratuito"]},
+      {w:"acuciar", ok:"apremiar", d:["aplacar","relajar","templar"]},
+      {w:"desdeñar", ok:"despreciar", d:["valorar","apreciar","elogiar"]},
+      {w:"parcial", ok:"sesgado", d:["objetivo","imparcial","neutral"]},
+      {w:"laxo", ok:"flojo", d:["riguroso","estricto","férreo"]},
+      {w:"contiguo", ok:"adyacente", d:["distante","remoto","separado"]},
+      {w:"atojar", ok:"imaginar", d:["olvidar","ignorar","negar"]},
+      {w:"urgente", ok:"apremiante", d:["postergable","difuso","prescindible"]},
+      {w:"somero", ok:"superficial", d:["profundo","minucioso","exhaustivo"]},
+      {w:"inédito", ok:"nuevo", d:["repetido","común","consabido"]}
+    ];
+
+    function generateSynonym(){
+      const i = between(0, SYN_BANK.length-1);
+      const item = SYN_BANK[i];
+      const options = shuffle([item.ok, ...shuffle(item.d).slice(0,3)]);
+      const answer = options.indexOf(item.ok);
+      return { q:`Elige el sinónimo de “${item.w}”`, options, answer };
+    }
+
+    function generateExam180(){
+      const qs = [];
+      // 70 aritmética, 40 porcentajes, 40 secuencias, 30 sinónimos = 180
+      for(let i=0;i<70;i++) qs.push(generateArithmetic());
+      for(let i=0;i<40;i++) qs.push(generatePercent());
+      for(let i=0;i<40;i++) qs.push(generateSequence());
+      for(let i=0;i<30;i++) qs.push(generateSynonym());
+      return shuffle(qs).slice(0,180);
+    }
+
+    /* ========= Estado ========= */
+    let QUESTIONS = generateExam180();
+    metaTotal.textContent = QUESTIONS.length;
+    let index = 0;
+    let answers = {};
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STATE_KEY);
+        if(!raw) return;
+        const s = JSON.parse(raw);
+        if(s && s.answers && Number.isInteger(s.index)){
+          answers = s.answers; index = Math.min(Math.max(0, s.index), QUESTIONS.length-1);
+          if(s.seeded && s.seeded === true && Array.isArray(s.cached)){
+            QUESTIONS = s.cached;
+          }
+        }
+      }catch(e){}
+    }
+    function saveState(){
+      localStorage.setItem(STATE_KEY, JSON.stringify({index, answers, seeded:true, cached:QUESTIONS}));
+    }
+
+    /* ========= Render ========= */
+    function updateProgress(){
+      const answered = Object.keys(answers).length;
+      const pct = Math.round((answered / QUESTIONS.length) * 100);
+      progressFill.style.width = pct + "%";
+    }
+    function renderGrid(){
+      grid.innerHTML = "";
+      for(let i=0;i<QUESTIONS.length;i++){
+        const b = document.createElement('button');
+        b.textContent = i+1;
+        if(answers[i] !== undefined) b.classList.add('answered');
+        if(i===index) b.classList.add('current');
+        b.addEventListener('click', ()=>{ index=i; saveState(); render(); window.scrollTo({top:0,behavior:'smooth'}); });
+        grid.appendChild(b);
+      }
+    }
+    function render(){
+      const item = QUESTIONS[index];
+      metaNum.textContent = index+1;
+      qNumber.textContent = `Pregunta ${index+1}`;
+      qText.textContent = item.q;
+      optionsWrap.innerHTML = "";
+      item.options.forEach((opt, i)=>{
+        const div = document.createElement('div');
+        div.className = "op";
+        div.innerHTML = `<input type="radio" name="opt"><div>${opt}</div>`;
+        if(answers[index] === i) div.classList.add('selected');
+        div.addEventListener('click', ()=>{
+          answers[index] = i;
+          [...optionsWrap.children].forEach(c=>c.classList.remove('selected'));
+          div.classList.add('selected');
+          saveState(); updateProgress(); renderGrid();
+        });
+        div.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); div.click(); } });
+        div.tabIndex = 0;
+        optionsWrap.appendChild(div);
+      });
+      updateProgress();
+      renderGrid();
+    }
+
+    /* ========= Navegación ========= */
+    function next(){ if(index < QUESTIONS.length-1){ index++; saveState(); render(); window.scrollTo({top:0,behavior:'smooth'});} }
+    function prev(){ if(index > 0){ index--; saveState(); render(); window.scrollTo({top:0,behavior:'smooth'});} }
+    document.getElementById('next').addEventListener('click', next);
+    document.getElementById('prev').addEventListener('click', prev);
+    document.getElementById('next_m').addEventListener('click', next);
+    document.getElementById('prev_m').addEventListener('click', prev);
+
+    /* ========= Timer simple ========= */
+    setInterval(()=>{
+      const d = Math.floor((Date.now()-T0)/1000);
+      const m = String(Math.floor(d/60)).padStart(2,'0');
+      const s = String(d%60).padStart(2,'0');
+      timerEl.textContent = `${m}:${s}`;
+    }, 1000);
+
+    /* ========= Terminar ========= */
+    document.getElementById('finish').addEventListener('click', ()=>{
+      let correct = 0;
+      QUESTIONS.forEach((q,i)=>{ if(answers[i] !== undefined && q.answer === answers[i]) correct++; });
+      const msg = `Terminaste. Aciertos: ${correct} / ${QUESTIONS.length}\n¿Deseas reiniciar y limpiar tu progreso?`;
+      if(confirm(msg)){
+        localStorage.removeItem(STATE_KEY);
+        index = 0; answers = {}; T0 = Date.now(); QUESTIONS = generateExam180(); saveState(); render();
+      }
+    });
+
+    /* ========= Init ========= */
+    loadState();
+    render();
+  </script>
+</body>
+</html>
